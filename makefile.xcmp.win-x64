@@ -1,0 +1,13 @@
+CFLAGS=-O2
+CC=x86_64-w64-mingw32-gcc
+ARCH=Win32.x64
+LDIR=contrib/${ARCH}
+ 
+all: 7800heat.${ARCH}.exe
+ 
+7800heat.${ARCH}.exe: 7800heat.c
+	$(CC) $(CFLAGS) 7800heat.c -o $@ -L${LDIR}/lib -I${LDIR}/include -lm
+ 
+clean:
+	rm -f 7800heat.${ARCH}.exe
+
