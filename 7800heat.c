@@ -20,6 +20,11 @@ void GetLabel(char *line, char *label);
 void GetContents(char *line, char *contents);
 void usage(char *programname);
 int CheckTightLoop(int address,char *contents1,char *contents2);
+int CheckMediumTightLoop(int address,char *contents1,char *contents2,char *contents3);
+void UpdateTopCounts(int count);
+
+int Top5Counts[5];
+int MaxCount;
 
 char *TraceFileName, *OutFileName;
 FILE *TraceFileHandle, *OutFileHandle;
@@ -229,9 +234,11 @@ int main(int argc, char **argv)
 	} // for loop for parsing the trace file
 	fprintf(stderr,"  ...done\n");
 
+	for(i=0;i<5;i++)
+		Top5Counts[i]=0;
+	MaxCount=0;
 
 	// find the MAX number of times any particular opcode was run
-	int MaxCount = 0;
 	for(i=0;i<0x8000;i++)
 	{
 		if(count_lowrom[i]>0)
@@ -242,6 +249,12 @@ int main(int argc, char **argv)
 				{
 					count_lowrom[i]*=-1;
 					count_lowrom[i+2]*=-1;
+				}
+				else if(CheckMediumTightLoop(i,assembly_lowrom[i],assembly_lowrom[i+2],assembly_lowrom[i+4]))
+				{
+					count_lowrom[i]*=-1;
+					count_lowrom[i+2]*=-1;
+					count_lowrom[i+4]*=-1;
 				}
 			}
 			BankCountLow=BankCountLow+count_lowrom[i];
@@ -264,6 +277,12 @@ int main(int argc, char **argv)
 					count_hirom[i]*=-1;
 					count_hirom[i+2]*=-1;
 				}
+				if(CheckMediumTightLoop(i+0xc000,assembly_hirom[i],assembly_hirom[i+2],assembly_hirom[i+4]))
+				{
+					count_hirom[i]*=-1;
+					count_hirom[i+2]*=-1;
+					count_hirom[i+4]*=-1;
+				}
 			}
 
 			BankCountHi=BankCountHi+count_hirom[i];
@@ -282,6 +301,12 @@ int main(int argc, char **argv)
 					{
 						count_midrom[j][i]*=-1;
 						count_midrom[j][i+2]*=-1;
+					}
+					if(CheckMediumTightLoop(i+0x8000,assembly_midrom[j][i],assembly_midrom[j][i+2],assembly_midrom[j][i+4]))
+					{
+						count_midrom[j][i]*=-1;
+						count_midrom[j][i+2]*=-1;
+						count_midrom[j][i+4]*=-1;
 					}
 				}
 				BankCountMid[j]+=count_midrom[j][i];
@@ -397,12 +422,12 @@ int CheckTightLoop(int address1,char *contents1,char *contents2)
 {
 
 	// tight loops always start with a register or memory load or bit...
-	if( (strncmp(contents1,"ld",2)!=0) && (strncmp(contents1,"bit",3)!=0) )
+	if( (strncmp(contents1,"ld",2)!=0) && (strncmp(contents1,"bit",3)!=0) && (strncmp(contents1,"cmp",3)!=0) )
 		return(FALSE);
-	if( 	(strncmp(contents2,"bpl",2)==0) || (strncmp(contents2,"bmi",2)==0) || 
-		(strncmp(contents2,"bvc",2)==0) || (strncmp(contents2,"bcc",2)==0) || 
-		(strncmp(contents2,"bcs",2)==0) || (strncmp(contents2,"bne",2)==0) || 
-		(strncmp(contents2,"beq",2)==0) )
+	if( 	(strncmp(contents2,"bpl",3)==0) || (strncmp(contents2,"bmi",3)==0) || 
+		(strncmp(contents2,"bvc",3)==0) || (strncmp(contents2,"bcc",3)==0) || 
+		(strncmp(contents2,"bcs",3)==0) || (strncmp(contents2,"bne",3)==0) || 
+		(strncmp(contents2,"beq",3)==0) )
 	{
 		int address2;
 		char *delim;
@@ -418,6 +443,37 @@ int CheckTightLoop(int address1,char *contents1,char *contents2)
 	}
 	return(FALSE);
 }
+
+int CheckMediumTightLoop(int address1,char *contents1,char *contents2,char *contents3)
+{
+
+	// medium tight loops always start with a register or memory load or bit...
+	if( (strncmp(contents1,"ld",2)!=0) && (strncmp(contents1,"bit",3)!=0))
+		return(FALSE);
+	if( ((strncmp(contents2,"cmp",3)==0)||(strncmp(contents2,"cp",2)==0)) && (strchr(contents2,'#')!=NULL) )
+	{
+		if( 	(strncmp(contents3,"bpl",3)==0) || (strncmp(contents3,"bmi",3)==0) || 
+			(strncmp(contents3,"bvc",3)==0) || (strncmp(contents3,"bcc",3)==0) || 
+			(strncmp(contents3,"bcs",3)==0) || (strncmp(contents3,"bne",3)==0) || 
+			(strncmp(contents3,"beq",3)==0) )
+		{
+			int address3;
+			char *delim;
+			delim=strchr(contents3,'$');
+			if(delim==NULL)
+				return(FALSE);
+			delim++;
+			address3=strtol(delim,NULL,16);
+			if(address1==address3)
+			{
+				return(TRUE);
+			}
+		}
+	}
+	return(FALSE);
+}
+
+
 
 void GetLabel(char *line, char *label)
 {
