@@ -1,4 +1,4 @@
-#define PROGNAME "7800heat v0.1"
+#define PROGNAME "7800heat v0.2"
 
 #include <stdio.h>
 #include <stdlib.h>
