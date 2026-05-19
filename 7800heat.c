@@ -1,4 +1,4 @@
-#define PROGNAME "7800heat v0.2"
+#define PROGNAME "7800heat v0.3"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -131,11 +131,12 @@ int main(int argc, char **argv)
 
 	if(EOFReached)
 	{
-		fprintf(stderr,"  ...handoff not found. Exiting.\n");
-		fprintf(stderr,"     be sure to capture your trace prior to console boot.\n");
-		exit(1);
+		fprintf(stderr,"  ...bios handoff not found. Assuming the trace begins in the game ROM.\n");
+		fprintf(stderr,"     If you emulated a bios boot, something has gone terribly wrong.\n");
+                rewind(TraceFileHandle);
 	}
-	fprintf(stderr,"  ...handoff found.\n");
+        else
+	    fprintf(stderr,"  ...handoff found.\n");
 
 	long int BankCountLow=0;
 	long int BankCountMid[MAXBANKS];
